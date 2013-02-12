@@ -66,8 +66,9 @@ class HipChat(jenkins_jobs.modules.base.Base):
            unless actually required.
         """
         if(not self.authToken):
+            global_config = self.registry.global_config
             try:
-                self.authToken = self.registry.global_config.get(
+                self.authToken = global_config.get(
                     'hipchat', 'authtoken')
                 # Require that the authtoken is non-null
                 if self.authToken == '':
@@ -78,7 +79,16 @@ class HipChat(jenkins_jobs.modules.base.Base):
                 logger.fatal("The configuration file needs a hipchat section" +
                              " containing authtoken:\n{0}".format(e))
                 sys.exit(1)
-            self.jenkinsUrl = self.registry.global_config.get('jenkins', 'url')
+
+            # This will attempt to load an external URL to use for the links
+            # Posted in hipchat.  if the external_url is not defined in the
+            # config it will fall back on the url used to configure the jenkins
+            # jobs.  Some shops use a proxy and a different external host and
+            # port combination for links into jenkins
+            try:
+                self.jenkinsUrl = global_config.get('jenkins', 'external_url')
+            except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
+                self.jenkinsUrl = global_config.get('jenkins', 'url')
 
     def gen_xml(self, parser, xml_parent, data):
         hipchat = data.get('hipchat')
